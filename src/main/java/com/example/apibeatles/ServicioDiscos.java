@@ -1,6 +1,8 @@
 package com.example.apibeatles;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,11 +50,38 @@ public class ServicioDiscos {
         return discos;
     }
 
+    public void eliminarCancionPorId(Long discoId, Long songId) {
+        for (int i = 0; i < discos.size(); i++) {
+            if (discos.get(i).id() == discoId) {
+                Disco disco = discos.get(i);
+
+                List<Cancion> cancionesActualizadas = disco.listadoCanciones().stream()
+                        .filter(c -> !c.id().equals(songId))
+                        .toList();
+
+                Disco actualizado = new Disco(
+                        disco.id(),
+                        disco.titulo(),
+                        disco.año(),
+                        disco.portada(),
+                        cancionesActualizadas,
+                        disco.descripcion()
+                );
+
+                discos.set(i, actualizado);
+                return;
+            }
+        }
+
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Disco no encontrado");
+    }
+
+
     public void eliminarCancionDeTodosLosDiscos(Long id) {
         for (int i = 0; i < discos.size(); i++) {
             Disco disco = discos.get(i);
             List<Cancion> cancionesActualizadas = disco.listadoCanciones().stream()
-                    .filter(c -> !c.id().equals(id))
+                    .filter(c -> c.id() == null || !c.id().equals(id))
                     .toList();
 
             Disco actualizado = new Disco(
@@ -66,5 +95,6 @@ public class ServicioDiscos {
             discos.set(i, actualizado);
         }
     }
+
 
 }

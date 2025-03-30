@@ -9,7 +9,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/beatlesapi/cancion")
 public class ControladorCanciones {
 
     private final ServicioCanciones servicioCanciones;
@@ -21,7 +20,7 @@ public class ControladorCanciones {
         this.servicioDiscos = servicioDiscos;
     }
 
-    @PostMapping
+    @PostMapping("/beatlesapi/cancion")
     @ResponseStatus(HttpStatus.CREATED)
     public Cancion createCancion(@Valid @RequestBody Cancion cancion) {
         return servicioCanciones.crearCancion(cancion);
@@ -32,13 +31,13 @@ public class ControladorCanciones {
         return servicioCanciones.obtenerTodas();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/beatlesapi/cancion/{id}")
     public Cancion getCancion(@PathVariable Long id) {
         return servicioCanciones.buscarPorId(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cancion no encontrada"));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/beatlesapi/cancion/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteCancion(@PathVariable Long id) {
         if (!servicioCanciones.eliminarPorId(id)) {
@@ -47,7 +46,7 @@ public class ControladorCanciones {
         servicioDiscos.eliminarCancionDeTodosLosDiscos(id);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/beatlesapi/cancion/{id}")
     public void updateCancion(@PathVariable Long id, @Valid @RequestBody Cancion actualizada) {
         servicioCanciones.actualizarCancion(id, actualizada);
     }

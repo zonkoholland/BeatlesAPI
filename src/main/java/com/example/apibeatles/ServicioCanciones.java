@@ -18,13 +18,6 @@ public class ServicioCanciones {
         return nueva;
     }
 
-    public Cancion buscarPorTitulo(String titulo) {
-        return canciones.stream()
-                .filter(c -> c.titulo().equalsIgnoreCase(titulo))
-                .findFirst()
-                .orElse(null);
-    }
-
     public void actualizarCancion(Long id, Cancion actualizada) {
         for (int i = 0; i < canciones.size(); i++) {
             if (canciones.get(i).id().equals(id)) {

@@ -7,13 +7,14 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 public class ControladorDiscos {
+    //Método de guardado de discos outdated
     private final ArrayList<Disco> discos = new ArrayList<>();
     private final ServicioDiscos servicioDiscos;
     private final ServicioCanciones servicioCanciones;
-    private long albumId = 1;
 
     public ControladorDiscos(ServicioDiscos servicioDiscos, ServicioCanciones servicioCanciones) {
         this.servicioDiscos = servicioDiscos;
@@ -23,18 +24,32 @@ public class ControladorDiscos {
     @PostMapping("/beatlesapi/disco")
     @ResponseStatus(HttpStatus.CREATED)
     public Disco createDisco(@Valid @RequestBody Disco disco) {
-        List<Cancion> cancionesConId = new ArrayList<>();
-        for (Cancion c : disco.listadoCanciones()) {
-            Cancion creada = servicioCanciones.crearCancion(c);
-            cancionesConId.add(creada);
-        }
-        return servicioDiscos.crearDisco(disco);
+        List<Cancion> cancionesConId = disco.listadoCanciones().stream()
+                .map(servicioCanciones::crearCancion)
+                .toList();
+
+        Disco nuevoDisco = new Disco(
+                disco.id(),
+                disco.titulo(),
+                disco.año(),
+                disco.portada(),
+                cancionesConId,
+                disco.descripcion()
+        );
+        return servicioDiscos.crearDisco(nuevoDisco);
     }
 
-    @GetMapping("/beatlesapi/disco/{titulo}")
+
+    @GetMapping("/beatlesapi/disco/titulo/{titulo}")
     public Disco getDisco(@PathVariable String titulo) {
         return servicioDiscos.buscarPorTitulo(titulo)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Disco no encontrado"));
+    }
+
+    @GetMapping("/beatlesapi/disco/{Id}")
+    public Disco getDisco(@PathVariable Long Id) {
+        return servicioDiscos.buscarPorId(Id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Disco no encontrado"));
     }
 
     @GetMapping("/beatlesapi/disco")
@@ -51,12 +66,52 @@ public class ControladorDiscos {
         servicioDiscos.eliminarPorId(Id);
     }
 
+    @DeleteMapping("/beatlesapi/disco/{Id}/cancion/{songId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteCancionDeDisco(@PathVariable Long Id, @PathVariable Long songId) {
+        Disco disco = servicioDiscos.buscarPorId(Id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Disco no encontrado"));
+        Long id = disco.id();
+        servicioDiscos.eliminarCancionPorId(id, songId);
+    }
+
 
     @PutMapping("/beatlesapi/disco/{Id}")
     public void updateDisco(@PathVariable Long Id, @Valid @RequestBody Disco disco) {
         servicioDiscos.actualizarDisco(Id, disco);
     }
 
+    @PutMapping("/beatlesapi/disco/{id}/agregarCancion")
+    public Disco agregarCancionAUnDisco(@PathVariable Long id, @RequestBody Cancion cancion) {
+        Disco disco = servicioDiscos.buscarPorId(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Disco no encontrado"));
+
+        Cancion finalCancion;
+        if (cancion.id() != null) {
+            finalCancion = servicioCanciones.buscarPorId(cancion.id())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Canción no encontrada"));
+        } else {
+            finalCancion = servicioCanciones.crearCancion(cancion);
+        }
+
+        List<Cancion> nuevasCanciones = new ArrayList<>(disco.listadoCanciones());
+        nuevasCanciones.add(finalCancion);
+
+        Disco actualizado = new Disco(
+                disco.id(),
+                disco.titulo(),
+                disco.año(),
+                disco.portada(),
+                nuevasCanciones,
+                disco.descripcion()
+        );
+
+        servicioDiscos.actualizarDisco(id, actualizado);
+        return actualizado;
+    }
+
+
+    //Métodos de actualización adicionales (outdated)
     @PutMapping("/beatlesapi/disco/{titulo}/portada/{portadaURL}")
     public void updatePortada(@PathVariable String titulo, String portadaURL) {
         for (int i = 0; i < discos.size(); i++) {
@@ -161,32 +216,6 @@ public class ControladorDiscos {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Disco no encontrado");
     }
 
-    //Eliminar canción de disco ya existente
-    @DeleteMapping("/beatlesapi/disco/{titulo}/cancion/{id}")
-    public void updateListadoCancionesDelete(@PathVariable String titulo, @PathVariable Long id) {
-        for (int i = 0; i < discos.size(); i++) {
-            if (discos.get(i).titulo().equalsIgnoreCase(titulo)) {
-                Disco viejo = discos.get(i);
-
-                List<Cancion> nuevasCanciones = viejo.listadoCanciones()
-                        .stream()
-                        .filter(c -> c.id() == null || !id.equals(c.id()))
-                        .toList();
-                Disco actualizado = new Disco(
-                        viejo.id(),
-                        viejo.titulo(),
-                        viejo.año(),
-                        viejo.portada(),
-                        nuevasCanciones,
-                        viejo.descripcion()
-                );
-                discos.set(i, actualizado);
-                return;
-            }
-        }
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Disco no encontrado");
-    }
-
 
     //IMPORTANTE: Declarar como texto y no como JSON en el Postman
     @PutMapping("/beatlesapi/disco/{titulo}/descripcion")
@@ -207,26 +236,6 @@ public class ControladorDiscos {
             }
         }
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Disco no encontrado");
-    }
-
-    public void eliminarCancionDeTodosLosDiscos(Long id) {
-        for (int i = 0; i < discos.size(); i++) {
-            Disco disco = discos.get(i);
-            List<Cancion> cancionesActualizadas = disco.listadoCanciones().stream()
-                    .filter(c -> !c.id().equals(id))
-                    .toList();
-
-            Disco actualizado = new Disco(
-                    disco.id(),
-                    disco.titulo(),
-                    disco.año(),
-                    disco.portada(),
-                    cancionesActualizadas,
-                    disco.descripcion()
-            );
-
-            discos.set(i, actualizado);
-        }
     }
 
 }

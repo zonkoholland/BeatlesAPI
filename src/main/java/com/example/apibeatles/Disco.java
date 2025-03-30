@@ -9,7 +9,6 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public record Disco(
-   @Id  @GeneratedValue
    Long id,
 
    @NotBlank(message="El disco necesita un título")

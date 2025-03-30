@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record Cancion(
-    @Id @GeneratedValue
     Long id,
 
     @NotBlank(message="La canción necesita un título")
